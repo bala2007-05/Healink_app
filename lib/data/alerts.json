@@ -1,0 +1,93 @@
+[
+  {
+    "id": "ALERT-001",
+    "deviceId": "IV-003",
+    "patientId": "P-2024-003",
+    "type": "critical",
+    "message": "Drip rate has stopped. Immediate attention required.",
+    "timestamp": "2024-01-15T10:25:00Z",
+    "acknowledged": false
+  },
+  {
+    "id": "ALERT-002",
+    "deviceId": "IV-002",
+    "patientId": "P-2024-002",
+    "type": "warning",
+    "message": "Battery level below 50%. Please recharge soon.",
+    "timestamp": "2024-01-15T10:20:00Z",
+    "acknowledged": false
+  },
+  {
+    "id": "ALERT-003",
+    "deviceId": "IV-005",
+    "patientId": "P-2024-005",
+    "type": "warning",
+    "message": "Battery level below 40%. Please recharge soon.",
+    "timestamp": "2024-01-15T10:15:00Z",
+    "acknowledged": true
+  },
+  {
+    "id": "ALERT-004",
+    "deviceId": "IV-001",
+    "patientId": "P-2024-001",
+    "type": "warning",
+    "message": "Drip rate fluctuation detected. Monitor closely.",
+    "timestamp": "2024-01-15T09:45:00Z",
+    "acknowledged": true
+  },
+  {
+    "id": "ALERT-005",
+    "deviceId": "IV-003",
+    "patientId": "P-2024-003",
+    "type": "critical",
+    "message": "Battery level critically low. Device may shut down soon.",
+    "timestamp": "2024-01-15T10:10:00Z",
+    "acknowledged": false
+  },
+  {
+    "id": "ALERT-006",
+    "deviceId": "IV-006",
+    "patientId": "P-2024-006",
+    "type": "warning",
+    "message": "Temperature reading slightly elevated. Normal range maintained.",
+    "timestamp": "2024-01-15T09:30:00Z",
+    "acknowledged": true
+  },
+  {
+    "id": "ALERT-007",
+    "deviceId": "IV-002",
+    "patientId": "P-2024-002",
+    "type": "warning",
+    "message": "Drip rate below expected range. Verify patient condition.",
+    "timestamp": "2024-01-15T09:15:00Z",
+    "acknowledged": true
+  },
+  {
+    "id": "ALERT-008",
+    "deviceId": "IV-004",
+    "patientId": "P-2024-004",
+    "type": "warning",
+    "message": "Pressure reading fluctuation. System operating normally.",
+    "timestamp": "2024-01-15T08:50:00Z",
+    "acknowledged": true
+  },
+  {
+    "id": "ALERT-009",
+    "deviceId": "IV-001",
+    "patientId": "P-2024-001",
+    "type": "warning",
+    "message": "Device connection interrupted briefly. Reconnected successfully.",
+    "timestamp": "2024-01-15T08:30:00Z",
+    "acknowledged": true
+  },
+  {
+    "id": "ALERT-010",
+    "deviceId": "IV-005",
+    "patientId": "P-2024-005",
+    "type": "critical",
+    "message": "Multiple sensor anomalies detected. Manual inspection recommended.",
+    "timestamp": "2024-01-15T08:00:00Z",
+    "acknowledged": false
+  }
+]
+

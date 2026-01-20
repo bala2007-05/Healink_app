@@ -1,0 +1,63 @@
+[
+  {
+    "deviceId": "IV-001",
+    "patientId": "P-2024-001",
+    "patientName": "John Smith",
+    "dripRate": 125.5,
+    "batteryLevel": 85,
+    "status": "good",
+    "lastUpdated": "2024-01-15T10:30:00Z",
+    "location": "Room 201"
+  },
+  {
+    "deviceId": "IV-002",
+    "patientId": "P-2024-002",
+    "patientName": "Emily Johnson",
+    "dripRate": 98.2,
+    "batteryLevel": 45,
+    "status": "warning",
+    "lastUpdated": "2024-01-15T10:28:00Z",
+    "location": "Room 305"
+  },
+  {
+    "deviceId": "IV-003",
+    "patientId": "P-2024-003",
+    "patientName": "Michael Brown",
+    "dripRate": 0.0,
+    "batteryLevel": 12,
+    "status": "critical",
+    "lastUpdated": "2024-01-15T10:25:00Z",
+    "location": "Room 412"
+  },
+  {
+    "deviceId": "IV-004",
+    "patientId": "P-2024-004",
+    "patientName": "Sarah Davis",
+    "dripRate": 150.0,
+    "batteryLevel": 92,
+    "status": "good",
+    "lastUpdated": "2024-01-15T10:32:00Z",
+    "location": "Room 108"
+  },
+  {
+    "deviceId": "IV-005",
+    "patientId": "P-2024-005",
+    "patientName": "David Wilson",
+    "dripRate": 75.8,
+    "batteryLevel": 38,
+    "status": "warning",
+    "lastUpdated": "2024-01-15T10:27:00Z",
+    "location": "Room 223"
+  },
+  {
+    "deviceId": "IV-006",
+    "patientId": "P-2024-006",
+    "patientName": "Lisa Anderson",
+    "dripRate": 110.3,
+    "batteryLevel": 78,
+    "status": "good",
+    "lastUpdated": "2024-01-15T10:31:00Z",
+    "location": "Room 156"
+  }
+]
+

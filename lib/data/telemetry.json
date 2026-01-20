@@ -1,0 +1,155 @@
+[
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:00:00Z",
+    "dripRate": 120.0,
+    "batteryLevel": 87,
+    "temperature": 22.5,
+    "pressure": 101.3
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:05:00Z",
+    "dripRate": 122.5,
+    "batteryLevel": 86,
+    "temperature": 22.6,
+    "pressure": 101.2
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:10:00Z",
+    "dripRate": 125.0,
+    "batteryLevel": 86,
+    "temperature": 22.7,
+    "pressure": 101.4
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:15:00Z",
+    "dripRate": 124.8,
+    "batteryLevel": 85,
+    "temperature": 22.5,
+    "pressure": 101.3
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:20:00Z",
+    "dripRate": 126.2,
+    "batteryLevel": 85,
+    "temperature": 22.6,
+    "pressure": 101.5
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:25:00Z",
+    "dripRate": 125.5,
+    "batteryLevel": 85,
+    "temperature": 22.5,
+    "pressure": 101.3
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:30:00Z",
+    "dripRate": 125.0,
+    "batteryLevel": 85,
+    "temperature": 22.6,
+    "pressure": 101.4
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:35:00Z",
+    "dripRate": 124.3,
+    "batteryLevel": 84,
+    "temperature": 22.7,
+    "pressure": 101.2
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:40:00Z",
+    "dripRate": 125.8,
+    "batteryLevel": 84,
+    "temperature": 22.5,
+    "pressure": 101.3
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:45:00Z",
+    "dripRate": 126.0,
+    "batteryLevel": 84,
+    "temperature": 22.6,
+    "pressure": 101.4
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:50:00Z",
+    "dripRate": 125.2,
+    "batteryLevel": 83,
+    "temperature": 22.5,
+    "pressure": 101.3
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T09:55:00Z",
+    "dripRate": 125.5,
+    "batteryLevel": 83,
+    "temperature": 22.6,
+    "pressure": 101.5
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:00:00Z",
+    "dripRate": 124.8,
+    "batteryLevel": 83,
+    "temperature": 22.7,
+    "pressure": 101.2
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:05:00Z",
+    "dripRate": 125.3,
+    "batteryLevel": 82,
+    "temperature": 22.5,
+    "pressure": 101.4
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:10:00Z",
+    "dripRate": 125.7,
+    "batteryLevel": 82,
+    "temperature": 22.6,
+    "pressure": 101.3
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:15:00Z",
+    "dripRate": 125.1,
+    "batteryLevel": 82,
+    "temperature": 22.5,
+    "pressure": 101.5
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:20:00Z",
+    "dripRate": 125.4,
+    "batteryLevel": 81,
+    "temperature": 22.6,
+    "pressure": 101.2
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:25:00Z",
+    "dripRate": 125.6,
+    "batteryLevel": 81,
+    "temperature": 22.7,
+    "pressure": 101.4
+  },
+  {
+    "deviceId": "IV-001",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "dripRate": 125.5,
+    "batteryLevel": 85,
+    "temperature": 22.5,
+    "pressure": 101.3
+  }
+]
+

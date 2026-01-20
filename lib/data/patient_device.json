@@ -1,0 +1,12 @@
+{
+  "deviceId": "IV-005",
+  "patientId": "P-2024-005",
+  "patientName": "David Wilson",
+  "room": "B-204",
+  "dripRate": 75.8,
+  "mlPerHour": 75.8,
+  "batteryLevel": 38,
+  "status": "warning",
+  "lastUpdated": "2024-01-15T10:27:00Z"
+}
+

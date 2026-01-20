@@ -1,0 +1,50 @@
+name: healink
+description: Smart IV Drip Monitoring System - Medical UI/UX App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  fl_chart: ^0.66.0
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+  shared_preferences: ^2.2.2
+  provider: ^6.1.1
+  http: ^1.1.0
+  socket_io_client: ^2.0.3+1
+  google_places_flutter: ^2.0.9
+  flutter_typeahead: ^5.0.0
+  flutter_secure_storage: ^9.0.0
+  image_picker: ^1.0.7
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - lib/data/devices.json
+    - lib/data/telemetry.json
+    - lib/data/alerts.json
+    - lib/data/patient_device.json
+    - assets/
+    - assets/logo.jpg
+    - assets/nurse_image.jpg
+    - assets/patient_image.jpg
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/logo.jpg"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/logo.jpg"
+

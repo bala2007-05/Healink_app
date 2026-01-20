@@ -1,0 +1,905 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart' as io_client;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/secure_storage.dart';
+
+class ApiService {
+  // ================================
+  // 🔵 HEALINK FINAL BACKEND URL
+  // Render backend base URL
+  static const String BASE_URL = "https://healink-backend.onrender.com";
+  
+  // API Main Path
+  static const String API_BASE = "$BASE_URL/api";
+  
+  // This backend is always live — no ngrok needed
+  // All services (Login, Register, OTP, Profile Upload, Telemetry) use this
+  // ================================
+  
+  // Request timeout duration (increased for Render free tier wake-up time)
+  static const Duration _timeoutDuration = Duration(seconds: 30);
+
+  // Get base URL (for backward compatibility)
+  static String get baseUrl => API_BASE;
+
+  // ================================
+  // 🔵 Default Headers for Render Backend
+  static Map<String, String> defaultHeaders = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'User-Agent': 'HEALINK-Mobile-App/1.0',
+  };
+
+  static Future<String?> _getToken() async {
+    try {
+      return await SecureStorage.readToken();
+    } catch (e) {
+      print('Error getting token: $e');
+      return null;
+    }
+  }
+
+  // Helper to get headers with auth token
+  static Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _getToken();
+    if (token != null) {
+      return {
+        ...defaultHeaders,
+        'Authorization': 'Bearer $token',
+      };
+    }
+    return defaultHeaders;
+  }
+  
+  // Helper method to make HTTP requests with timeout and error handling
+  static Future<http.Response> _makeRequest(
+    Future<http.Response> Function() request, {
+    String? operation,
+  }) async {
+    try {
+      final response = await request().timeout(
+        _timeoutDuration,
+        onTimeout: () {
+          throw TimeoutException(
+            'Request timeout after ${_timeoutDuration.inSeconds} seconds',
+            _timeoutDuration,
+          );
+        },
+      );
+      return response;
+    } on TimeoutException catch (e) {
+      print('❌ Timeout error${operation != null ? " ($operation)" : ""}: ${e.message}');
+      rethrow;
+    } on SocketException catch (e) {
+      print('❌ Network error${operation != null ? " ($operation)" : ""}: ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('❌ Request error${operation != null ? " ($operation)" : ""}: $e');
+      rethrow;
+    }
+  }
+
+  // Helper method to parse response
+  static Map<String, dynamic> _parseResponse(http.Response response, String operation) {
+    try {
+      print('📡 $operation Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Body length: ${response.body.length}');
+      
+      if (response.body.isEmpty) {
+        print('❌ Empty response body');
+        throw Exception('Empty response from server');
+      }
+
+      // Try to decode JSON
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (jsonError) {
+        print('❌ JSON decode error: $jsonError');
+        final preview = response.body.length > 500 
+            ? response.body.substring(0, 500) 
+            : response.body;
+        print('   Response body preview: $preview');
+        
+        // Check if response is HTML (likely error page)
+        final bodyLower = response.body.toLowerCase();
+        if (response.body.trim().startsWith('<!DOCTYPE') || 
+            response.body.trim().startsWith('<html')) {
+          // Safe substring - don't exceed string length
+          final safePreview = preview.length > 200 ? preview.substring(0, 200) : preview;
+          
+          // Check for specific backend errors
+          String errorMessage = 'Server returned HTML instead of JSON.\n\n';
+          if (bodyLower.contains('cannot post') || bodyLower.contains('cannot get')) {
+            errorMessage += '❌ Backend route not found!\n';
+            errorMessage += 'The API endpoint does not exist or the backend server is not running.\n\n';
+            errorMessage += 'Please check:\n';
+            errorMessage += '1. Backend server is running on Render\n';
+            errorMessage += '2. Backend routes are properly configured\n';
+            errorMessage += '3. Backend URL is correct: $BASE_URL\n\n';
+          } else {
+            errorMessage += 'This usually means:\n';
+            errorMessage += '1. Backend error - Check if the backend server is running on Render\n';
+            errorMessage += '2. Wrong URL - Verify the backend URL is correct\n';
+            errorMessage += '3. Check Render deployment logs for errors\n\n';
+          }
+          errorMessage += 'Response preview: $safePreview...';
+          
+          throw Exception(errorMessage);
+        }
+        
+        throw Exception('Invalid JSON response from server: ${jsonError.toString()}');
+      }
+
+      // Validate it's a Map
+      if (decoded is! Map<String, dynamic>) {
+        print('❌ Response is not a Map: ${decoded.runtimeType}');
+        print('   Response type: ${decoded.runtimeType}');
+        print('   Response value: $decoded');
+        throw Exception('Invalid response format: expected JSON object, got ${decoded.runtimeType}');
+      }
+
+      return Map<String, dynamic>.from(decoded);
+    } catch (e) {
+      print('❌ Error parsing response: $e');
+      // If it's already a formatted exception, rethrow it
+      if (e.toString().contains('Invalid response format') || 
+          e.toString().contains('HTML') ||
+          e.toString().contains('JSON')) {
+        rethrow;
+      }
+      throw Exception('Invalid response format from server: ${e.toString()}');
+    }
+  }
+
+  // Auth endpoints
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    try {
+      print('🔐 Attempting login...');
+      print('   Email: $email');
+      print('   URL: $API_BASE/auth/login');
+
+      final url = Uri.parse('$API_BASE/auth/login');
+      final body = jsonEncode({
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      });
+
+      print('   Request body: ${body.replaceAll(password, '***')}');
+
+      final response = await _makeRequest(
+        () async => http.post(
+          url,
+          headers: defaultHeaders,
+          body: body,
+        ),
+        operation: 'login',
+      );
+
+      final data = _parseResponse(response, 'Login');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        print('✅ Login successful');
+        
+        // Save token to secure storage
+        await SecureStorage.saveToken(data['data']['token']);
+        
+        // Save role to SharedPreferences (for backward compatibility)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_role', data['data']['role']);
+        
+        print('   Token saved to secure storage');
+        print('   Role: ${data['data']['role']}');
+        
+        return data;
+      } else {
+        final errorMsg = data['message'] ?? 'Login failed';
+        print('❌ Login failed: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection and try again.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check:\n1. Backend is running on $BASE_URL\n2. Your device is on the same network\n3. Firewall is not blocking the connection');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Login error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Login failed. Please try again.' : errorMsg);
+    }
+  }
+
+  static Future<Map<String, dynamic>> registerNurse(
+    String name,
+    String email,
+    String password, {
+    String? profileImage,
+  }) async {
+    try {
+      print('📝 Attempting nurse registration...');
+      print('   Name: $name');
+      print('   Email: $email');
+      print('   Profile Image: ${profileImage ?? 'Not provided (will use default)'}');
+      print('   URL: $API_BASE/auth/register-nurse');
+
+      final url = Uri.parse('$API_BASE/auth/register-nurse');
+      final body = jsonEncode({
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password,
+        if (profileImage != null && profileImage.isNotEmpty) 'profileImage': profileImage.trim(),
+      });
+
+      print('   Request body: ${body.replaceAll(password, '***')}');
+
+      final response = await _makeRequest(
+        () async => http.post(
+          url,
+          headers: defaultHeaders,
+          body: body,
+        ),
+        operation: 'register-nurse',
+      );
+
+      final data = _parseResponse(response, 'Nurse Registration');
+
+      if (response.statusCode == 201 && data['success'] == true) {
+        print('✅ Nurse registration successful');
+        
+        // Save token to secure storage
+        await SecureStorage.saveToken(data['data']['token']);
+        
+        // Save role to SharedPreferences (for backward compatibility)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_role', data['data']['role']);
+        
+        print('   Token saved to secure storage');
+        print('   Role: ${data['data']['role']}');
+        
+        return data;
+      } else {
+        final errorMsg = data['message'] ?? 'Registration failed';
+        print('❌ Registration failed: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection and try again.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check:\n1. Backend is running on $BASE_URL\n2. Your device is on the same network\n3. Firewall is not blocking the connection');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Registration error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Registration failed. Please try again.' : errorMsg);
+    }
+  }
+
+  static Future<Map<String, dynamic>> registerPatient(
+    String name,
+    String email,
+    String password, {
+    String? roomNumber,
+    String? profileImage,
+  }) async {
+    try {
+      print('📝 Attempting patient registration...');
+      print('   Name: $name');
+      print('   Email: $email');
+      print('   Room Number: ${roomNumber ?? 'Not provided'}');
+      print('   Profile Image: ${profileImage ?? 'Not provided (will use default)'}');
+      print('   URL: $API_BASE/auth/register-patient');
+
+      final url = Uri.parse('$API_BASE/auth/register-patient');
+      final body = jsonEncode({
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password,
+        if (roomNumber != null && roomNumber.isNotEmpty) 'roomNumber': roomNumber.trim(),
+        if (profileImage != null && profileImage.isNotEmpty) 'profileImage': profileImage.trim(),
+      });
+
+      print('   Request body: ${body.replaceAll(password, '***')}');
+
+      final response = await _makeRequest(
+        () async => http.post(
+          url,
+          headers: defaultHeaders,
+          body: body,
+        ),
+        operation: 'register-patient',
+      );
+
+      final data = _parseResponse(response, 'Patient Registration');
+
+      if (response.statusCode == 201 && data['success'] == true) {
+        print('✅ Patient registration successful');
+        
+        // Save token to secure storage
+        await SecureStorage.saveToken(data['data']['token']);
+        
+        // Save role to SharedPreferences (for backward compatibility)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_role', data['data']['role']);
+        
+        print('   Token saved to secure storage');
+        print('   Role: ${data['data']['role']}');
+        
+        return data;
+      } else {
+        final errorMsg = data['message'] ?? 'Registration failed';
+        print('❌ Registration failed: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection and try again.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check:\n1. Backend is running on $BASE_URL\n2. Your device is on the same network\n3. Firewall is not blocking the connection');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Registration error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Registration failed. Please try again.' : errorMsg);
+    }
+  }
+
+  // User endpoints
+  static Future<Map<String, dynamic>> getCurrentUser() async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        throw Exception('Not authenticated. Please login again.');
+      }
+
+      print('👤 Fetching current user...');
+      final url = Uri.parse('$API_BASE/auth/me');
+      final headers = await _getAuthHeaders();
+      
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: {
+            ...headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+        operation: 'get-current-user',
+      );
+
+      final data = _parseResponse(response, 'Get Current User');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        print('✅ User data fetched successfully');
+        return data;
+      } else if (response.statusCode == 401) {
+        // Token invalid or expired
+        await SecureStorage.deleteToken();
+        throw Exception('Session expired. Please login again.');
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get user');
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check your network connection.');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      if (errorMsg.contains('401') || errorMsg.contains('Not authorized')) {
+        await SecureStorage.deleteToken();
+        throw Exception('Session expired. Please login again.');
+      }
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Failed to get user data' : errorMsg);
+    }
+  }
+
+  // Logout - clears token and user state
+  static Future<Map<String, dynamic>> updateProfileImage(String profileImageUrl) async {
+    try {
+      print('📸 Attempting to update profile image...');
+      print('   Profile Image URL: $profileImageUrl');
+      print('   URL: $API_BASE/users/update-profile');
+
+      final token = await _getToken();
+      if (token == null) {
+        throw Exception('Not authenticated. Please login again.');
+      }
+
+      final url = Uri.parse('$API_BASE/users/update-profile');
+      
+      // Truncate profileImageUrl for logging (base64 can be very long)
+      final logUrl = profileImageUrl.length > 100 
+          ? '${profileImageUrl.substring(0, 100)}... (${profileImageUrl.length} chars)'
+          : profileImageUrl;
+      print('   Profile Image (preview): $logUrl');
+      
+      final body = jsonEncode({
+        'profileImage': profileImageUrl, // base64 string
+        'isBase64': true,
+      });
+
+      print('   Request body size: ${body.length} characters');
+
+      final headers = await _getAuthHeaders();
+      
+      print('   Headers: ${headers.keys.join(", ")}');
+      print('   Making PATCH request to: $url');
+      
+      // Create HTTP client for this request
+      final httpClient = HttpClient();
+      httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      final client = io_client.IOClient(httpClient);
+      
+      final response = await _makeRequest(
+        () => client.patch(
+          url,
+          headers: headers,
+          body: body,
+        ),
+        operation: 'update-profile-image',
+      );
+
+      print('   Response received, status: ${response.statusCode}');
+      final data = _parseResponse(response, 'Profile Image Update');
+
+      // Handle different status codes
+      if (response.statusCode == 200) {
+        if (data['success'] == true) {
+          // Validate response structure
+          if (data['data'] != null && data['data'] is Map) {
+            print('✅ Profile image updated successfully');
+            print('   New Profile Image: ${data['data']['profileImage'] ?? 'Not provided'}');
+            return data;
+          } else {
+            print('❌ Invalid response structure: data field missing or invalid');
+            throw Exception('Invalid response format: missing data field');
+          }
+        } else {
+          final errorMsg = data['message'] ?? 'Failed to update profile image';
+          print('❌ Profile image update failed: $errorMsg');
+          throw Exception(errorMsg);
+        }
+      } else if (response.statusCode == 400) {
+        final errorMsg = data['message'] ?? 'Bad request. Please check your image format.';
+        print('❌ Bad request: $errorMsg');
+        throw Exception(errorMsg);
+      } else if (response.statusCode == 401) {
+        await SecureStorage.deleteToken();
+        throw Exception('Session expired. Please login again.');
+      } else {
+        final errorMsg = data['message'] ?? 'Failed to update profile image';
+        print('❌ Profile image update failed (${response.statusCode}): $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection and try again.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check your internet connection.');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Profile image update error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Failed to update profile image. Please try again.' : errorMsg);
+    }
+  }
+
+  static Future<void> logout() async {
+    try {
+      print('🚪 Logging out...');
+      await SecureStorage.deleteToken();
+      
+      // Also clear SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_role');
+      
+      print('✅ Logout successful - token cleared');
+    } catch (e) {
+      print('❌ Error during logout: $e');
+      // Don't throw - try to clear anyway
+      try {
+        await SecureStorage.deleteToken();
+      } catch (_) {
+        // Ignore
+      }
+    }
+  }
+
+  // Device endpoints
+  static Future<Map<String, dynamic>> getDevices() async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final url = Uri.parse('$API_BASE/devices');
+      final headers = await _getAuthHeaders();
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: {
+            ...headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+        operation: 'get-devices',
+      );
+
+      final data = _parseResponse(response, 'Get Devices');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get devices');
+      }
+    } catch (e) {
+      throw Exception('Get devices error: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getDevice(String deviceId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final url = Uri.parse('$API_BASE/devices/$deviceId');
+      final headers = await _getAuthHeaders();
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: {
+            ...headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+        operation: 'get-device',
+      );
+
+      final data = _parseResponse(response, 'Get Device');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get device');
+      }
+    } catch (e) {
+      throw Exception('Get device error: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
+  // Telemetry endpoints
+  static Future<Map<String, dynamic>> getTelemetry(String deviceId, {int limit = 50}) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final url = Uri.parse('$API_BASE/telemetry/$deviceId?limit=$limit');
+      final headers = await _getAuthHeaders();
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: {
+            ...headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+        operation: 'get-telemetry',
+      );
+
+      final data = _parseResponse(response, 'Get Telemetry');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get telemetry');
+      }
+    } catch (e) {
+      throw Exception('Get telemetry error: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
+  // Alert endpoints
+  static Future<Map<String, dynamic>> getAlerts(String deviceId, {int limit = 50}) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final url = Uri.parse('$API_BASE/alerts/$deviceId?limit=$limit');
+      final headers = await _getAuthHeaders();
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: {
+            ...headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+        operation: 'get-alerts',
+      );
+
+      final data = _parseResponse(response, 'Get Alerts');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get alerts');
+      }
+    } catch (e) {
+      throw Exception('Get alerts error: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getAllAlerts({int limit = 100}) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final url = Uri.parse('$API_BASE/alerts?limit=$limit');
+      final headers = await _getAuthHeaders();
+      final response = await _makeRequest(
+        () => http.get(
+          url,
+          headers: {
+            ...headers,
+            'Authorization': 'Bearer $token',
+          },
+        ),
+        operation: 'get-all-alerts',
+      );
+
+      final data = _parseResponse(response, 'Get All Alerts');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get alerts');
+      }
+    } catch (e) {
+      throw Exception('Get alerts error: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
+  // Password reset endpoints
+  // ⚠️ IMPORTANT: This endpoint requires POST method (not GET)
+  // Browser GET requests will return 405 Method Not Allowed
+  // Use POST with JSON body: {"email": "user@example.com"}
+  static Future<Map<String, dynamic>> requestOtp(String email) async {
+    try {
+      print('🔐 Requesting OTP for password reset...');
+      print('   Email: $email');
+      print('   Method: POST');
+      print('   URL: $API_BASE/auth/forgot-password');
+
+      // POST request with JSON body
+      final response = await http.post(
+        Uri.parse('$API_BASE/auth/forgot-password'),
+        headers: defaultHeaders, // Includes Content-Type: application/json
+        body: jsonEncode({'email': email.trim().toLowerCase()}),
+      ).timeout(_timeoutDuration);
+
+      final data = _parseResponse(response, 'Request OTP');
+
+      if (response.statusCode == 200) {
+        if (data['success'] == true) {
+          print('✅ OTP request successful');
+          print('   Email sent: ${data['emailSent'] ?? false}');
+          print('   Message: ${data['message']}');
+          return data;
+        } else {
+          // Email sending failed but OTP was generated
+          print('⚠️ OTP generated but email sending failed');
+          print('   Error: ${data['message']}');
+          return data; // Return data so Flutter can handle the error
+        }
+      } else {
+        // Backend returned error - display backend error message
+        final errorMsg = data['message'] ?? 'Failed to generate OTP';
+        print('❌ OTP request failed: $errorMsg');
+        print('   Status Code: ${response.statusCode}');
+        print('   Response: $data');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception(
+        'Connection timeout.\n\n'
+        'Render free tier may be waking up (can take 30-60 seconds).\n\n'
+        'Please try again in a moment.'
+      );
+    } on SocketException {
+      throw Exception(
+        'Cannot connect to server.\n\n'
+        'Please check:\n'
+        '1. Your internet connection\n'
+        '2. Backend is running: $BASE_URL\n'
+        '3. Try again (Render may be waking up)'
+      );
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Request OTP error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Failed to request OTP. Please try again.' : errorMsg);
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    try {
+      print('🔐 Verifying OTP...');
+      print('   Email: $email');
+      print('   OTP: $otp');
+      print('   URL: $API_BASE/auth/verify-otp');
+
+      final response = await http.post(
+        Uri.parse('$API_BASE/auth/verify-otp'),
+        headers: defaultHeaders,
+        body: jsonEncode({
+          'email': email.trim().toLowerCase(),
+          'otp': otp.trim(),
+        }),
+      ).timeout(_timeoutDuration);
+
+      final data = _parseResponse(response, 'Verify OTP');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        print('✅ OTP verified successfully');
+        return data;
+      } else {
+        // Backend returned error - display backend error message
+        final errorMsg = data['message'] ?? 'Failed to verify OTP';
+        print('❌ OTP verification failed: $errorMsg');
+        print('   Status Code: ${response.statusCode}');
+        print('   Response: $data');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection and try again.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check your internet connection.');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Verify OTP error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Failed to verify OTP. Please try again.' : errorMsg);
+    }
+  }
+
+  // ⚠️ IMPORTANT: This endpoint requires POST method (not GET)
+  static Future<Map<String, dynamic>> resetPassword(String email, String otp, String newPassword) async {
+    try {
+      print('🔐 Resetting password...');
+      print('   Email: $email');
+      print('   Method: POST');
+      print('   URL: $API_BASE/auth/reset-password');
+
+      // POST request with JSON body
+      final response = await http.post(
+        Uri.parse('$API_BASE/auth/reset-password'),
+        headers: defaultHeaders,
+        body: jsonEncode({
+          'email': email.trim().toLowerCase(),
+          'otp': otp.trim(),
+          'newPassword': newPassword,
+        }),
+      ).timeout(_timeoutDuration);
+
+      final data = _parseResponse(response, 'Reset Password');
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        print('✅ Password reset successfully');
+        return data;
+      } else {
+        // Backend returned error - display backend error message
+        final errorMsg = data['message'] ?? 'Failed to reset password';
+        print('❌ Password reset failed: $errorMsg');
+        print('   Status Code: ${response.statusCode}');
+        print('   Response: $data');
+        throw Exception(errorMsg);
+      }
+    } on TimeoutException {
+      throw Exception('Connection timeout. Please check your internet connection and try again.');
+    } on SocketException {
+      throw Exception('Cannot connect to server. Please check your internet connection.');
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      print('❌ Reset password error: $errorMsg');
+      
+      // Provide helpful message for HTML responses
+      if (errorMsg.contains('HTML')) {
+        throw Exception(
+          'Unable to connect to server.\n\n'
+          'Backend returned HTML instead of JSON.\n\n'
+          'Please check:\n'
+          '1. Backend is running on Render: $BASE_URL\n'
+          '2. Check Render deployment logs for errors\n'
+          '3. Verify the backend URL is correct'
+        );
+      }
+      
+      throw Exception(errorMsg.isEmpty ? 'Failed to reset password. Please try again.' : errorMsg);
+    }
+  }
+}
