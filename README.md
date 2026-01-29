@@ -77,4 +77,9 @@ To design an application that:
 - Integration with hospital systems  
 
 ---
+## 📸 Project Images
+
+![Healink App](images/Healink app1.jpg)
+(images/Healink app2.jpg)
+
 
