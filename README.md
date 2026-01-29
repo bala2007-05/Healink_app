@@ -4,7 +4,7 @@ Healink is a real-time monitoring application designed to display IV fluid level
 
 ---
 
-## 🚨 Problem Statement
+##  Problem Statement
 IV monitoring systems generate sensor data, but without a proper interface:
 - Medical staff cannot easily track multiple patients  
 - Critical alerts may be missed  
@@ -12,7 +12,7 @@ IV monitoring systems generate sensor data, but without a proper interface:
 
 ---
 
-## 🎯 Objective
+##  Objective
 To design an application that:
 - Displays IV fluid level in real time  
 - Visualizes patient infusion data  
@@ -21,7 +21,7 @@ To design an application that:
 
 ---
 
-## ✨ Features
+##  Features
 - Real-time IV level dashboard  
 - Patient-wise monitoring view  
 - Threshold-based alerts  
@@ -30,7 +30,7 @@ To design an application that:
 
 ---
 
-## 🖥️ App Functionalities
+##  App Functionalities
 - Live fluid level graph  
 - Bottle status (Normal / Low / Critical)  
 - Alert notifications  
@@ -39,12 +39,12 @@ To design an application that:
 
 ---
 
-## 💻 Technologies Used
-- Node-RED / Web Dashboard  
-- Firebase / ThingSpeak  
-- REST API / MQTT  
-- HTML / CSS / JavaScript (if web)  
-- Flutter / React Native (if mobile)  
+##  Technologies Used 
+- Flutter
+- Node + express .js
+- MongoDB
+- RestAPI
+- MQTT
 
 ---
 
@@ -61,7 +61,7 @@ To design an application that:
 
 ---
 
-## 🏥 Applications
+##  Applications
 - Hospital nurse stations  
 - ICU dashboards  
 - Remote patient monitoring  
@@ -69,7 +69,7 @@ To design an application that:
 
 ---
 
-## 🔮 Future Scope
+##  Future Scope
 - Push notifications to nurse mobiles  
 - Multi-patient ward dashboard  
 - Role-based access (Doctor/Nurse/Admin)  
@@ -77,86 +77,4 @@ To design an application that:
 - Integration with hospital systems  
 
 ---
-
-# 💉 Healink – Smart IV Monitoring App
-
-Healink is a real-time monitoring application designed to display IV fluid levels, visualize patient infusion data, and notify medical staff about critical conditions through an interactive dashboard.
-
----
-
-## 🚨 Problem Statement
-IV monitoring systems generate sensor data, but without a proper interface:
-- Medical staff cannot easily track multiple patients  
-- Critical alerts may be missed  
-- Data is not centrally visualized  
-
----
-
-## 🎯 Objective
-To design an application that:
-- Displays IV fluid level in real time  
-- Visualizes patient infusion data  
-- Sends alerts for critical levels  
-- Enables remote monitoring  
-
----
-
-## ✨ Features
-- Real-time IV level dashboard  
-- Patient-wise monitoring view  
-- Threshold-based alerts  
-- Visual status indicators  
-- Simple and intuitive UI  
-
----
-
-## 🖥️ App Functionalities
-- Live fluid level graph  
-- Bottle status (Normal / Low / Critical)  
-- Alert notifications  
-- Patient ID tracking  
-- Historical data view  
-
----
-
-## 💻 Technologies Used
-- Node-RED / Web Dashboard  
-- Firebase / ThingSpeak  
-- REST API / MQTT  
-- HTML / CSS / JavaScript (if web)  
-- Flutter / React Native (if mobile)  
-
----
-
-## ⚙️ How It Works
-- IV monitoring device sends sensor data via Wi-Fi  
-- Data is received by cloud/database  
-- Healink app fetches data in real time  
-- App displays:
-  - Fluid level  
-  - Patient status  
-- When threshold is crossed:
-  - App triggers notification  
-  - Status is highlighted  
-
----
-
-## 🏥 Applications
-- Hospital nurse stations  
-- ICU dashboards  
-- Remote patient monitoring  
-- Home healthcare systems  
-
----
-
-## 🔮 Future Scope
-- Push notifications to nurse mobiles  
-- Multi-patient ward dashboard  
-- Role-based access (Doctor/Nurse/Admin)  
-- AI-based infusion prediction  
-- Integration with hospital systems  
-
----
-
-
 
