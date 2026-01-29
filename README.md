@@ -79,8 +79,6 @@ To design an application that:
 ---
 ## 📸 Project Images
 
-## 📸 App Screenshots
-
 ![Healink App 1](images/Healink_app1.jpg)
 ![Healink App 2](images/Healink_app2.jpg)
 
